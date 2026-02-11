@@ -419,9 +419,9 @@
 
             // ── API Helpers ──────────────────────────────
 
-            apiGet: function(path) {
+            apiGet: function(path, params) {
                 return ApiClient.ajax({
-                    url: ApiClient.getUrl(path),
+                    url: params ? ApiClient.getUrl(path, params) : ApiClient.getUrl(path),
                     type: 'GET',
                     dataType: 'json'
                 });
@@ -577,7 +577,8 @@
                 promise.then(function() {
                     self.closeModal();
                     self.loadChannels();
-                    Dashboard.alert('Channel saved successfully.');
+                    self.refreshGuideData();
+                    Dashboard.alert('Channel saved. Live TV guide is refreshing...');
                 });
             },
 
@@ -590,6 +591,7 @@
                 var self = this;
                 this.apiDelete('LiveTvScheduler/Channels/' + channelId).then(function() {
                     self.loadChannels();
+                    self.refreshGuideData();
                 });
             },
 
@@ -649,7 +651,7 @@
                 }
 
                 var self = this;
-                this.apiGet('LiveTvScheduler/Search?query=' + encodeURIComponent(query) + '&limit=30')
+                this.apiGet('LiveTvScheduler/Search', { query: query, limit: 30 })
                     .then(function(items) {
                         self.renderSearchResults(items);
                     });
@@ -702,7 +704,7 @@
                 var channelId = document.getElementById('editChannelId').value;
 
                 // Search for episodes directly
-                this.apiGet('LiveTvScheduler/Search?parentId=' + seriesId + '&limit=500')
+                this.apiGet('LiveTvScheduler/Search', { parentId: seriesId, limit: 500 })
                     .then(function(items) {
                         var episodes = items.filter(function(i) { return i.Type === 'Episode'; });
                         for (var i = 0; i < episodes.length; i++) {
@@ -831,6 +833,22 @@
                 var div = document.createElement('div');
                 div.textContent = str;
                 return div.innerHTML;
+            },
+
+            // ── Guide Refresh ───────────────────────────
+
+            refreshGuideData: function() {
+                this.apiGet('ScheduledTasks').then(function(tasks) {
+                    for (var i = 0; i < tasks.length; i++) {
+                        if (tasks[i].Key === 'RefreshGuide') {
+                            ApiClient.ajax({
+                                url: ApiClient.getUrl('ScheduledTasks/Running/' + tasks[i].Id),
+                                type: 'POST'
+                            });
+                            break;
+                        }
+                    }
+                });
             }
         };
 

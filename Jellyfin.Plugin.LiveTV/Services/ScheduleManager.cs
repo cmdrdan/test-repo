@@ -53,7 +53,7 @@ public class ScheduleManager
 
             var query = new InternalItemsQuery
             {
-                AncestorIds = new[] { parentGuid },
+                ParentId = parentGuid,
                 Recursive = true,
                 IsVirtualItem = false,
                 IncludeItemTypes = new[]
