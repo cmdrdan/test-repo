@@ -577,7 +577,8 @@
                 promise.then(function() {
                     self.closeModal();
                     self.loadChannels();
-                    Dashboard.alert('Channel saved successfully.');
+                    self.refreshGuideData();
+                    Dashboard.alert('Channel saved. Live TV guide is refreshing...');
                 });
             },
 
@@ -590,6 +591,7 @@
                 var self = this;
                 this.apiDelete('LiveTvScheduler/Channels/' + channelId).then(function() {
                     self.loadChannels();
+                    self.refreshGuideData();
                 });
             },
 
@@ -831,6 +833,22 @@
                 var div = document.createElement('div');
                 div.textContent = str;
                 return div.innerHTML;
+            },
+
+            // ── Guide Refresh ───────────────────────────
+
+            refreshGuideData: function() {
+                this.apiGet('ScheduledTasks').then(function(tasks) {
+                    for (var i = 0; i < tasks.length; i++) {
+                        if (tasks[i].Key === 'RefreshGuide') {
+                            ApiClient.ajax({
+                                url: ApiClient.getUrl('ScheduledTasks/Running/' + tasks[i].Id),
+                                type: 'POST'
+                            });
+                            break;
+                        }
+                    }
+                });
             }
         };
 
