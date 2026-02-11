@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.LiveTV.Models;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
@@ -52,7 +53,7 @@ public class ScheduleManager
 
             var query = new InternalItemsQuery
             {
-                ParentIds = new[] { parentGuid },
+                AncestorIds = new[] { parentGuid },
                 Recursive = true,
                 IsVirtualItem = false,
                 IncludeItemTypes = new[]
