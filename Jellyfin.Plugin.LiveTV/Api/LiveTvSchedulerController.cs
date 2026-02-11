@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
+using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.LiveTV.Configuration;
 using Jellyfin.Plugin.LiveTV.Models;
 using Jellyfin.Plugin.LiveTV.Services;
@@ -364,7 +365,7 @@ public class LiveTvSchedulerController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(parentId) && Guid.TryParse(parentId, out var parentGuid))
         {
-            itemQuery.ParentIds = new[] { parentGuid };
+            itemQuery.AncestorIds = new[] { parentGuid };
         }
 
         var results = _libraryManager.GetItemsResult(itemQuery);
