@@ -1,0 +1,20 @@
+[
+  {
+    "guid": "f4c6e3a8-b7d1-4e2f-9a5c-8d3b1e6f7a90",
+    "name": "LiveTV Scheduler",
+    "description": "Simulates live TV programming using your existing Jellyfin media library. Create custom channels, assign shows and movies, and generate automatic schedules. Streams directly from local files with no external dependencies or transcoding overhead.",
+    "overview": "Create virtual live TV channels from your media library",
+    "owner": "cmdrdan",
+    "category": "Live TV",
+    "versions": [
+      {
+        "version": "1.0.0.0",
+        "changelog": "Initial release with channel management, schedule generation, and native Jellyfin Live TV integration.",
+        "targetAbi": "10.10.6.0",
+        "sourceUrl": "https://github.com/cmdrdan/test-repo/releases/download/v1.0.0/livetv-scheduler-1.0.0.zip",
+        "checksum": "",
+        "timestamp": "2026-02-11T00:00:00Z"
+      }
+    ]
+  }
+]
