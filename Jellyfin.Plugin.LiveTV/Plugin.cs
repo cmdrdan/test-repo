@@ -35,8 +35,12 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         {
             new PluginPageInfo
             {
-                Name = "livetv-scheduler",
-                EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html"
+                Name = Name,
+                EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
+                EnableInMainMenu = true,
+                MenuSection = "server",
+                MenuIcon = "live_tv",
+                DisplayName = "LiveTV Scheduler"
             }
         };
     }
