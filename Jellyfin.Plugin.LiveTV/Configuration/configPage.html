@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>LiveTV Scheduler</title>
+    <style>
+        .livetv-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .livetv-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1em;
+        }
+        .channel-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+        }
+        .channel-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 1em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .channel-card:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .channel-card.disabled {
+            opacity: 0.5;
+        }
+        .channel-info {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+        }
+        .channel-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00a4dc;
+            min-width: 3em;
+            text-align: center;
+        }
+        .channel-details h3 {
+            margin: 0 0 0.25em 0;
+        }
+        .channel-details .meta {
+            font-size: 0.85em;
+            opacity: 0.7;
+        }
+        .channel-actions {
+            display: flex;
+            gap: 0.5em;
+        }
+        .btn {
+            padding: 0.4em 0.8em;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
+            background: rgba(255,255,255,0.1);
+            color: inherit;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .btn-primary {
+            background: #00a4dc;
+            border-color: #00a4dc;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #008bbf;
+        }
+        .btn-danger {
+            border-color: #cc3333;
+            color: #cc3333;
+        }
+        .btn-danger:hover {
+            background: rgba(204,51,51,0.2);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 5vh;
+            overflow-y: auto;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 1.5em;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            margin-bottom: 5vh;
+        }
+        .modal h2 {
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 1em;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.3em;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.5em;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
+            background: rgba(255,255,255,0.05);
+            color: inherit;
+            font-size: 1em;
+        }
+        .form-row {
+            display: flex;
+            gap: 1em;
+        }
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        /* Program list */
+        .program-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+        .program-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5em 0.75em;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .program-item:last-child {
+            border-bottom: none;
+        }
+        .program-item .name {
+            flex: 1;
+        }
+        .program-item .runtime {
+            opacity: 0.6;
+            font-size: 0.85em;
+            margin: 0 1em;
+        }
+
+        /* Search */
+        .search-box {
+            display: flex;
+            gap: 0.5em;
+            margin-bottom: 0.5em;
+        }
+        .search-box input {
+            flex: 1;
+            padding: 0.5em;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
+            background: rgba(255,255,255,0.05);
+            color: inherit;
+        }
+        .search-results {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+        .search-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5em 0.75em;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+        }
+        .search-item:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .search-item .info {
+            flex: 1;
+        }
+        .search-item .info .title {
+            font-weight: bold;
+        }
+        .search-item .info .subtitle {
+            font-size: 0.8em;
+            opacity: 0.6;
+        }
+
+        /* Schedule preview */
+        .schedule-preview {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .schedule-slot {
+            display: flex;
+            align-items: center;
+            padding: 0.5em 0.75em;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .schedule-slot.now-playing {
+            background: rgba(0,164,220,0.15);
+            border-left: 3px solid #00a4dc;
+        }
+        .schedule-slot .time {
+            min-width: 6em;
+            font-size: 0.85em;
+            opacity: 0.7;
+        }
+        .schedule-slot .title {
+            flex: 1;
+            font-weight: bold;
+        }
+        .schedule-slot .duration {
+            font-size: 0.85em;
+            opacity: 0.6;
+        }
+
+        /* Library selector */
+        .library-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5em;
+        }
+        .library-chip {
+            padding: 0.3em 0.7em;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .library-chip.selected {
+            background: #00a4dc;
+            border-color: #00a4dc;
+        }
+
+        /* Tabs */
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            margin-bottom: 1em;
+        }
+        .tab {
+            padding: 0.5em 1em;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            opacity: 0.7;
+        }
+        .tab.active {
+            border-bottom-color: #00a4dc;
+            opacity: 1;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3em 1em;
+            opacity: 0.6;
+        }
+        .empty-state h3 {
+            margin-bottom: 0.5em;
+        }
+    </style>
+</head>
+<body>
+    <div id="LiveTvSchedulerPage" data-role="page"
+         class="page type-interior pluginConfigurationPage"
+         data-require="emby-button">
+        <div data-role="content">
+            <div class="content-primary livetv-container">
+                <div class="livetv-header">
+                    <div>
+                        <h1>LiveTV Scheduler</h1>
+                        <p style="opacity: 0.7; margin-top: 0.25em;">
+                            Create virtual TV channels from your media library
+                        </p>
+                    </div>
+                    <button class="btn btn-primary" onclick="LiveTV.showCreateChannel()">
+                        + New Channel
+                    </button>
+                </div>
+
+                <div id="channelList" class="channel-list">
+                    <div class="empty-state">
+                        <h3>No channels yet</h3>
+                        <p>Create your first virtual TV channel to get started.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Channel Modal -->
+    <div id="channelModal" class="modal-overlay" onclick="LiveTV.closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2 id="modalTitle">New Channel</h2>
+            <form id="channelForm" onsubmit="LiveTV.saveChannel(event)">
+                <input type="hidden" id="editChannelId" value="">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="channelName">Channel Name</label>
+                        <input type="text" id="channelName" required placeholder="e.g. Comedy Central">
+                    </div>
+                    <div class="form-group" style="max-width: 120px;">
+                        <label for="channelNumber">Number</label>
+                        <input type="text" id="channelNumber" placeholder="1">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="channelGroup">Group</label>
+                        <input type="text" id="channelGroup" value="Virtual" placeholder="Virtual">
+                    </div>
+                    <div class="form-group">
+                        <label for="channelMode">Schedule Mode</label>
+                        <select id="channelMode">
+                            <option value="0">Shuffle</option>
+                            <option value="1">Sequential</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Content Sources (Libraries)</label>
+                    <div id="libraryChips" class="library-chips">
+                        Loading libraries...
+                    </div>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 1.5em 0;">
+
+                <h3>Programs</h3>
+                <p style="font-size: 0.85em; opacity: 0.7; margin-bottom: 0.75em;">
+                    Add specific shows and movies, or use library sources above for automatic scheduling.
+                </p>
+
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search for shows, movies..."
+                           oninput="LiveTV.debounceSearch()">
+                    <button type="button" class="btn" onclick="LiveTV.searchItems()">Search</button>
+                </div>
+
+                <div id="searchResults" class="search-results" style="display: none;"></div>
+
+                <div style="margin-top: 1em;">
+                    <label style="font-weight: bold; font-size: 0.9em;">
+                        Channel Program List
+                    </label>
+                    <div id="programList" class="program-list">
+                        <div class="empty-state" style="padding: 1em;">
+                            <p>No programs added yet.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.5em; margin-top: 1.5em; justify-content: flex-end;">
+                    <button type="button" class="btn" onclick="LiveTV.closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Channel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Schedule Preview Modal -->
+    <div id="scheduleModal" class="modal-overlay" onclick="LiveTV.closeScheduleModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 id="scheduleTitle">Schedule Preview</h2>
+                <button class="btn" onclick="LiveTV.closeScheduleModal()">Close</button>
+            </div>
+            <div id="schedulePreview" class="schedule-preview">
+                Loading...
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        var LiveTV = {
+            pluginId: 'f4c6e3a8-b7d1-4e2f-9a5c-8d3b1e6f7a90',
+            channels: [],
+            libraries: [],
+            currentPrograms: [],
+            searchTimeout: null,
+
+            init: function() {
+                this.loadChannels();
+                this.loadLibraries();
+            },
+
+            // ── API Helpers ──────────────────────────────
+
+            apiGet: function(path) {
+                return ApiClient.ajax({
+                    url: ApiClient.getUrl(path),
+                    type: 'GET',
+                    dataType: 'json'
+                });
+            },
+
+            apiPost: function(path, data) {
+                return ApiClient.ajax({
+                    url: ApiClient.getUrl(path),
+                    type: 'POST',
+                    data: JSON.stringify(data),
+                    contentType: 'application/json'
+                });
+            },
+
+            apiPut: function(path, data) {
+                return ApiClient.ajax({
+                    url: ApiClient.getUrl(path),
+                    type: 'PUT',
+                    data: JSON.stringify(data),
+                    contentType: 'application/json'
+                });
+            },
+
+            apiDelete: function(path) {
+                return ApiClient.ajax({
+                    url: ApiClient.getUrl(path),
+                    type: 'DELETE'
+                });
+            },
+
+            // ── Channel List ─────────────────────────────
+
+            loadChannels: function() {
+                var self = this;
+                this.apiGet('LiveTvScheduler/Channels').then(function(channels) {
+                    self.channels = channels;
+                    self.renderChannels();
+                });
+            },
+
+            renderChannels: function() {
+                var container = document.getElementById('channelList');
+
+                if (!this.channels || this.channels.length === 0) {
+                    container.innerHTML = '<div class="empty-state">' +
+                        '<h3>No channels yet</h3>' +
+                        '<p>Create your first virtual TV channel to get started.</p>' +
+                        '</div>';
+                    return;
+                }
+
+                var html = '';
+                for (var i = 0; i < this.channels.length; i++) {
+                    var ch = this.channels[i];
+                    var modeText = ch.Mode === 0 ? 'Shuffle' : 'Sequential';
+                    var progCount = ch.Programs ? ch.Programs.length : 0;
+                    var libCount = ch.LibraryIds ? ch.LibraryIds.length : 0;
+                    var sourceText = '';
+                    if (progCount > 0) sourceText += progCount + ' program' + (progCount !== 1 ? 's' : '');
+                    if (libCount > 0) {
+                        if (sourceText) sourceText += ', ';
+                        sourceText += libCount + ' librar' + (libCount !== 1 ? 'ies' : 'y');
+                    }
+                    if (!sourceText) sourceText = 'No content sources';
+
+                    html += '<div class="channel-card' + (ch.Enabled ? '' : ' disabled') + '">' +
+                        '<div class="channel-info">' +
+                        '<div class="channel-number">' + this.escapeHtml(ch.Number) + '</div>' +
+                        '<div class="channel-details">' +
+                        '<h3>' + this.escapeHtml(ch.Name) + '</h3>' +
+                        '<div class="meta">' + modeText + ' &middot; ' + sourceText + '</div>' +
+                        '</div>' +
+                        '</div>' +
+                        '<div class="channel-actions">' +
+                        '<button class="btn" onclick="LiveTV.showSchedule(\'' + ch.Id + '\')">Schedule</button>' +
+                        '<button class="btn" onclick="LiveTV.editChannel(\'' + ch.Id + '\')">Edit</button>' +
+                        '<button class="btn btn-danger" onclick="LiveTV.deleteChannel(\'' + ch.Id + '\')">Delete</button>' +
+                        '</div>' +
+                        '</div>';
+                }
+
+                container.innerHTML = html;
+            },
+
+            // ── Channel Create/Edit ──────────────────────
+
+            loadLibraries: function() {
+                var self = this;
+                this.apiGet('LiveTvScheduler/Libraries').then(function(libs) {
+                    self.libraries = libs;
+                });
+            },
+
+            showCreateChannel: function() {
+                document.getElementById('modalTitle').textContent = 'New Channel';
+                document.getElementById('editChannelId').value = '';
+                document.getElementById('channelName').value = '';
+                document.getElementById('channelNumber').value = (this.channels.length + 1).toString();
+                document.getElementById('channelGroup').value = 'Virtual';
+                document.getElementById('channelMode').value = '0';
+                this.currentPrograms = [];
+                this.renderLibraryChips([]);
+                this.renderProgramList();
+                this.clearSearch();
+                document.getElementById('channelModal').classList.add('active');
+            },
+
+            editChannel: function(channelId) {
+                var ch = this.channels.find(function(c) { return c.Id === channelId; });
+                if (!ch) return;
+
+                document.getElementById('modalTitle').textContent = 'Edit Channel';
+                document.getElementById('editChannelId').value = ch.Id;
+                document.getElementById('channelName').value = ch.Name;
+                document.getElementById('channelNumber').value = ch.Number;
+                document.getElementById('channelGroup').value = ch.Group;
+                document.getElementById('channelMode').value = ch.Mode.toString();
+                this.currentPrograms = ch.Programs ? ch.Programs.slice() : [];
+                this.renderLibraryChips(ch.LibraryIds || []);
+                this.renderProgramList();
+                this.clearSearch();
+                document.getElementById('channelModal').classList.add('active');
+            },
+
+            saveChannel: function(e) {
+                e.preventDefault();
+                var self = this;
+                var channelId = document.getElementById('editChannelId').value;
+                var selectedLibs = this.getSelectedLibraries();
+
+                var data = {
+                    Name: document.getElementById('channelName').value,
+                    Number: document.getElementById('channelNumber').value,
+                    Group: document.getElementById('channelGroup').value,
+                    Mode: parseInt(document.getElementById('channelMode').value),
+                    LibraryIds: selectedLibs
+                };
+
+                var promise;
+                if (channelId) {
+                    promise = this.apiPut('LiveTvScheduler/Channels/' + channelId, data).then(function() {
+                        // Also update programs
+                        return self.apiPut('LiveTvScheduler/Channels/' + channelId + '/Programs', self.currentPrograms);
+                    });
+                } else {
+                    promise = this.apiPost('LiveTvScheduler/Channels', data).then(function(newChannel) {
+                        if (self.currentPrograms.length > 0 && newChannel && newChannel.Id) {
+                            return self.apiPut('LiveTvScheduler/Channels/' + newChannel.Id + '/Programs', self.currentPrograms);
+                        }
+                    });
+                }
+
+                promise.then(function() {
+                    self.closeModal();
+                    self.loadChannels();
+                    Dashboard.alert('Channel saved successfully.');
+                });
+            },
+
+            deleteChannel: function(channelId) {
+                var ch = this.channels.find(function(c) { return c.Id === channelId; });
+                if (!ch) return;
+
+                if (!confirm('Delete channel "' + ch.Name + '"?')) return;
+
+                var self = this;
+                this.apiDelete('LiveTvScheduler/Channels/' + channelId).then(function() {
+                    self.loadChannels();
+                });
+            },
+
+            closeModal: function(e) {
+                if (e && e.target !== e.currentTarget) return;
+                document.getElementById('channelModal').classList.remove('active');
+            },
+
+            // ── Library Chips ────────────────────────────
+
+            renderLibraryChips: function(selectedIds) {
+                var container = document.getElementById('libraryChips');
+                if (!this.libraries || this.libraries.length === 0) {
+                    container.innerHTML = '<span style="opacity: 0.5;">No libraries found</span>';
+                    return;
+                }
+
+                var html = '';
+                for (var i = 0; i < this.libraries.length; i++) {
+                    var lib = this.libraries[i];
+                    var isSelected = selectedIds.indexOf(lib.Id) !== -1;
+                    html += '<div class="library-chip' + (isSelected ? ' selected' : '') +
+                        '" data-id="' + lib.Id + '" onclick="LiveTV.toggleLibrary(this)">' +
+                        this.escapeHtml(lib.Name) + '</div>';
+                }
+                container.innerHTML = html;
+            },
+
+            toggleLibrary: function(el) {
+                el.classList.toggle('selected');
+            },
+
+            getSelectedLibraries: function() {
+                var chips = document.querySelectorAll('#libraryChips .library-chip.selected');
+                var ids = [];
+                for (var i = 0; i < chips.length; i++) {
+                    ids.push(chips[i].getAttribute('data-id'));
+                }
+                return ids;
+            },
+
+            // ── Search & Add Programs ────────────────────
+
+            debounceSearch: function() {
+                var self = this;
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(function() {
+                    self.searchItems();
+                }, 300);
+            },
+
+            searchItems: function() {
+                var query = document.getElementById('searchInput').value;
+                if (!query || query.length < 2) {
+                    document.getElementById('searchResults').style.display = 'none';
+                    return;
+                }
+
+                var self = this;
+                this.apiGet('LiveTvScheduler/Search?query=' + encodeURIComponent(query) + '&limit=30')
+                    .then(function(items) {
+                        self.renderSearchResults(items);
+                    });
+            },
+
+            renderSearchResults: function(items) {
+                var container = document.getElementById('searchResults');
+                if (!items || items.length === 0) {
+                    container.innerHTML = '<div style="padding: 1em; text-align: center; opacity: 0.5;">No results found</div>';
+                    container.style.display = 'block';
+                    return;
+                }
+
+                var html = '';
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+                    var subtitle = item.Type;
+                    if (item.SeriesName) subtitle = item.SeriesName + ' - S' + (item.SeasonNumber || '?') + 'E' + (item.EpisodeNumber || '?');
+                    if (item.ProductionYear) subtitle += ' (' + item.ProductionYear + ')';
+
+                    if (item.Type === 'Series') {
+                        html += '<div class="search-item" onclick="LiveTV.addSeries(\'' + item.Id + '\')">' +
+                            '<div class="info"><div class="title">' + this.escapeHtml(item.Name) + '</div>' +
+                            '<div class="subtitle">' + this.escapeHtml(subtitle) + ' - Click to add all episodes</div></div>' +
+                            '<span class="btn" style="font-size: 0.8em;">+ All</span></div>';
+                    } else {
+                        html += '<div class="search-item" onclick="LiveTV.addProgram(\'' +
+                            item.Id + '\', ' + JSON.stringify(item.Name) + ', ' + item.RuntimeTicks + ')">' +
+                            '<div class="info"><div class="title">' + this.escapeHtml(item.Name) + '</div>' +
+                            '<div class="subtitle">' + this.escapeHtml(subtitle) + ' &middot; ' + item.RuntimeDisplay + '</div></div>' +
+                            '<span class="btn" style="font-size: 0.8em;">+ Add</span></div>';
+                    }
+                }
+
+                container.innerHTML = html;
+                container.style.display = 'block';
+            },
+
+            addProgram: function(itemId, name, runtimeTicks) {
+                this.currentPrograms.push({
+                    ItemId: itemId,
+                    Name: name,
+                    RuntimeTicks: runtimeTicks
+                });
+                this.renderProgramList();
+            },
+
+            addSeries: function(seriesId) {
+                var self = this;
+                var channelId = document.getElementById('editChannelId').value;
+
+                // Search for episodes directly
+                this.apiGet('LiveTvScheduler/Search?parentId=' + seriesId + '&limit=500')
+                    .then(function(items) {
+                        var episodes = items.filter(function(i) { return i.Type === 'Episode'; });
+                        for (var i = 0; i < episodes.length; i++) {
+                            self.currentPrograms.push({
+                                ItemId: episodes[i].Id,
+                                Name: episodes[i].Name,
+                                RuntimeTicks: episodes[i].RuntimeTicks
+                            });
+                        }
+                        self.renderProgramList();
+                        Dashboard.alert(episodes.length + ' episodes added.');
+                    });
+            },
+
+            removeProgram: function(index) {
+                this.currentPrograms.splice(index, 1);
+                this.renderProgramList();
+            },
+
+            renderProgramList: function() {
+                var container = document.getElementById('programList');
+                if (!this.currentPrograms || this.currentPrograms.length === 0) {
+                    container.innerHTML = '<div class="empty-state" style="padding: 1em;"><p>No programs added yet.</p></div>';
+                    return;
+                }
+
+                var html = '';
+                var totalTicks = 0;
+                for (var i = 0; i < this.currentPrograms.length; i++) {
+                    var p = this.currentPrograms[i];
+                    totalTicks += p.RuntimeTicks;
+                    var runtime = this.formatTicks(p.RuntimeTicks);
+                    html += '<div class="program-item">' +
+                        '<span class="name">' + (i + 1) + '. ' + this.escapeHtml(p.Name) + '</span>' +
+                        '<span class="runtime">' + runtime + '</span>' +
+                        '<button class="btn btn-danger" style="padding: 0.2em 0.5em; font-size: 0.8em;" ' +
+                        'onclick="LiveTV.removeProgram(' + i + ')">Remove</button>' +
+                        '</div>';
+                }
+
+                html += '<div style="padding: 0.5em 0.75em; font-size: 0.85em; opacity: 0.6; border-top: 1px solid rgba(255,255,255,0.1);">' +
+                    'Total: ' + this.currentPrograms.length + ' programs &middot; ' + this.formatTicks(totalTicks) + ' runtime' +
+                    '</div>';
+
+                container.innerHTML = html;
+            },
+
+            clearSearch: function() {
+                document.getElementById('searchInput').value = '';
+                document.getElementById('searchResults').style.display = 'none';
+            },
+
+            // ── Schedule Preview ─────────────────────────
+
+            showSchedule: function(channelId) {
+                var ch = this.channels.find(function(c) { return c.Id === channelId; });
+                if (!ch) return;
+
+                document.getElementById('scheduleTitle').textContent = ch.Name + ' - Schedule';
+                document.getElementById('schedulePreview').innerHTML = '<div style="padding: 2em; text-align: center; opacity: 0.5;">Loading schedule...</div>';
+                document.getElementById('scheduleModal').classList.add('active');
+
+                var self = this;
+                this.apiGet('LiveTvScheduler/Channels/' + channelId + '/Schedule?hours=24')
+                    .then(function(slots) {
+                        self.renderSchedulePreview(slots);
+                    });
+            },
+
+            renderSchedulePreview: function(slots) {
+                var container = document.getElementById('schedulePreview');
+                if (!slots || slots.length === 0) {
+                    container.innerHTML = '<div style="padding: 2em; text-align: center; opacity: 0.5;">' +
+                        'No schedule data. Add programs or library sources to this channel.</div>';
+                    return;
+                }
+
+                var now = new Date();
+                var html = '';
+                for (var i = 0; i < slots.length; i++) {
+                    var slot = slots[i];
+                    var start = new Date(slot.StartTimeUtc);
+                    var end = new Date(slot.EndTimeUtc);
+                    var isNow = now >= start && now < end;
+                    var duration = this.formatTicks(slot.RuntimeTicks);
+                    var timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    var title = slot.Title;
+                    if (slot.IsSeries && slot.EpisodeTitle) {
+                        title += ' - ' + slot.EpisodeTitle;
+                        if (slot.SeasonNumber && slot.EpisodeNumber) {
+                            title += ' (S' + slot.SeasonNumber + 'E' + slot.EpisodeNumber + ')';
+                        }
+                    }
+
+                    html += '<div class="schedule-slot' + (isNow ? ' now-playing' : '') + '">' +
+                        '<span class="time">' + timeStr + (isNow ? ' NOW' : '') + '</span>' +
+                        '<span class="title">' + this.escapeHtml(title) + '</span>' +
+                        '<span class="duration">' + duration + '</span>' +
+                        '</div>';
+                }
+
+                container.innerHTML = html;
+            },
+
+            closeScheduleModal: function(e) {
+                if (e && e.target !== e.currentTarget) return;
+                document.getElementById('scheduleModal').classList.remove('active');
+            },
+
+            // ── Utilities ────────────────────────────────
+
+            formatTicks: function(ticks) {
+                if (!ticks) return '0:00';
+                var totalSeconds = Math.floor(ticks / 10000000);
+                var hours = Math.floor(totalSeconds / 3600);
+                var minutes = Math.floor((totalSeconds % 3600) / 60);
+                if (hours > 0) {
+                    return hours + ':' + (minutes < 10 ? '0' : '') + minutes;
+                }
+                return minutes + ' min';
+            },
+
+            escapeHtml: function(str) {
+                if (!str) return '';
+                var div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+        };
+
+        document.querySelector('#LiveTvSchedulerPage')
+            .addEventListener('pageshow', function() {
+                LiveTV.init();
+            });
+    </script>
+</body>
+</html>
