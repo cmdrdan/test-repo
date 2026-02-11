@@ -1,0 +1,19 @@
+---
+name: "LiveTV Scheduler"
+guid: "f4c6e3a8-b7d1-4e2f-9a5c-8d3b1e6f7a90"
+version: "1.0.0.0"
+targetAbi: "10.10.0.0"
+framework: "net8.0"
+overview: "Create virtual live TV channels from your media library"
+description: >
+  Simulates live TV programming using your existing Jellyfin media library.
+  Create custom channels, assign shows and movies, and generate automatic
+  schedules. Streams directly from local files with no external dependencies
+  or transcoding overhead.
+category: "Live TV"
+owner: "cmdrdan"
+artifacts:
+  - "Jellyfin.Plugin.LiveTV.dll"
+changelog: >
+  Initial release with channel management, schedule generation, and
+  native Jellyfin Live TV integration.
