@@ -14,10 +14,8 @@ namespace Jellyfin.Plugin.LiveTV.Services;
 
 /// <summary>
 /// Manages live stream sessions for virtual channels.
-/// The key optimization: instead of transcoding through an external service,
-/// we point Jellyfin directly at the local media file and set the start position
-/// so playback begins at the correct offset. This eliminates the lag that
-/// tools like ErsatzTV or Tunarr introduce.
+/// Clones the actual library item's media source so Jellyfin's playback pipeline
+/// (HLS, direct play, transcoding) has complete codec/stream metadata to work with.
 /// </summary>
 public class StreamManager
 {
@@ -37,10 +35,26 @@ public class StreamManager
     }
 
     /// <summary>
-    /// Creates a MediaSourceInfo that points directly at the local media file.
-    /// Jellyfin handles all the playback, seeking, and (if needed) transcoding.
+    /// Creates a MediaSourceInfo for the "media sources available" query.
+    /// Sets RequiresOpening = true so Jellyfin opens the stream through the
+    /// proper Live TV pipeline before playback begins.
+    /// </summary>
+    public MediaSourceInfo CreateMediaSourcePreview(string channelId, ScheduleSlot slot)
+    {
+        return BuildMediaSource(channelId, slot, isPreview: true);
+    }
+
+    /// <summary>
+    /// Creates a MediaSourceInfo for actual stream playback.
+    /// Uses the library item's real media source so all codec/stream metadata
+    /// is present for Jellyfin's HLS and transcoding pipeline.
     /// </summary>
     public MediaSourceInfo CreateMediaSource(string channelId, ScheduleSlot slot)
+    {
+        return BuildMediaSource(channelId, slot, isPreview: false);
+    }
+
+    private MediaSourceInfo BuildMediaSource(string channelId, ScheduleSlot slot, bool isPreview)
     {
         if (!Guid.TryParse(slot.ItemId, out var itemGuid))
         {
@@ -54,58 +68,103 @@ public class StreamManager
         }
 
         var streamId = $"livetv_{channelId}_{DateTime.UtcNow.Ticks}";
-        var filePath = item.Path;
 
         _logger.LogInformation(
-            "Opening stream for channel {ChannelId}: {Title} at offset {Offset}",
-            channelId,
-            slot.Title,
-            slot.ElapsedTime);
+            "Building media source for channel {ChannelId}: {Title} at offset {Offset} (preview={Preview})",
+            channelId, slot.Title, slot.ElapsedTime, isPreview);
 
-        // Track active stream
-        _activeStreams[streamId] = new ActiveStream
-        {
-            StreamId = streamId,
-            ChannelId = channelId,
-            ItemId = slot.ItemId,
-            StartedAtUtc = DateTime.UtcNow
-        };
-
-        // Get media sources from the library item through the media source manager
-        List<MediaSourceInfo>? existingSources = null;
+        // Get the actual media source from the library item — this has all the
+        // codec info, MediaStreams, container format, etc. that Jellyfin's
+        // playback pipeline needs.
+        MediaSourceInfo? primarySource = null;
         try
         {
-            existingSources = _mediaSourceManager
+            var existingSources = _mediaSourceManager
                 .GetStaticMediaSources(item, false)
                 .ToList();
+
+            primarySource = existingSources.FirstOrDefault();
+
+            _logger.LogInformation(
+                "Got {Count} static media sources for item {ItemId}, primary container={Container}, streams={StreamCount}",
+                existingSources.Count,
+                slot.ItemId,
+                primarySource?.Container ?? "null",
+                primarySource?.MediaStreams?.Count ?? 0);
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Could not get media sources for item {ItemId}", slot.ItemId);
+            _logger.LogError(ex, "Failed to get media sources for item {ItemId}", slot.ItemId);
         }
 
-        var primarySource = existingSources?.FirstOrDefault();
+        MediaSourceInfo mediaSource;
 
-        var mediaSource = new MediaSourceInfo
+        if (primarySource is not null)
         {
-            Id = streamId,
-            Path = filePath,
-            Protocol = MediaProtocol.File,
-            Container = primarySource?.Container ?? GetContainerFromPath(filePath),
-            IsInfiniteStream = false,
-            IsRemote = false,
-            SupportsDirectPlay = true,
-            SupportsDirectStream = true,
-            SupportsTranscoding = true,
-            SupportsProbing = true,
-            RequiresOpening = false,
-            RequiresClosing = true,
-            LiveStreamId = streamId,
-            ReadAtNativeFramerate = false,
-            RunTimeTicks = slot.RuntimeTicks,
-            MediaStreams = primarySource?.MediaStreams ?? new List<MediaStream>(),
-            Bitrate = primarySource?.Bitrate
-        };
+            // Use the real media source — this preserves all MediaStreams,
+            // codec info, container format, bitrate, etc.
+            mediaSource = primarySource;
+            mediaSource.Id = streamId;
+            mediaSource.LiveStreamId = streamId;
+            mediaSource.RequiresClosing = true;
+            mediaSource.RequiresOpening = isPreview;
+            mediaSource.IsInfiniteStream = false;
+            mediaSource.RunTimeTicks = slot.RuntimeTicks;
+            mediaSource.SupportsDirectPlay = true;
+            mediaSource.SupportsDirectStream = true;
+            mediaSource.SupportsTranscoding = true;
+            mediaSource.SupportsProbing = true;
+            mediaSource.ReadAtNativeFramerate = false;
+
+            if (isPreview)
+            {
+                mediaSource.OpenToken = $"livetv_{channelId}";
+            }
+        }
+        else
+        {
+            // Fallback: build a minimal source from what we know
+            _logger.LogWarning("No existing media source found for {ItemId}, building minimal source", slot.ItemId);
+            var filePath = item.Path;
+
+            mediaSource = new MediaSourceInfo
+            {
+                Id = streamId,
+                Path = filePath,
+                Protocol = MediaProtocol.File,
+                Container = GetContainerFromPath(filePath),
+                IsInfiniteStream = false,
+                IsRemote = false,
+                SupportsDirectPlay = true,
+                SupportsDirectStream = true,
+                SupportsTranscoding = true,
+                SupportsProbing = true,
+                RequiresOpening = isPreview,
+                RequiresClosing = true,
+                LiveStreamId = streamId,
+                ReadAtNativeFramerate = false,
+                RunTimeTicks = slot.RuntimeTicks,
+                MediaStreams = new List<MediaStream>(),
+                Bitrate = null
+            };
+
+            if (isPreview)
+            {
+                mediaSource.OpenToken = $"livetv_{channelId}";
+            }
+        }
+
+        if (!isPreview)
+        {
+            // Track active stream for cleanup
+            _activeStreams[streamId] = new ActiveStream
+            {
+                StreamId = streamId,
+                ChannelId = channelId,
+                ItemId = slot.ItemId,
+                StartedAtUtc = DateTime.UtcNow
+            };
+        }
 
         return mediaSource;
     }
