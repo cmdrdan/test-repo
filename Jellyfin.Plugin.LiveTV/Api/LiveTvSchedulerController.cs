@@ -16,6 +16,7 @@ using MediaBrowser.Model.Querying;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.LiveTV.Api;
 
@@ -31,13 +32,16 @@ public class LiveTvSchedulerController : ControllerBase
 {
     private readonly ILibraryManager _libraryManager;
     private readonly ScheduleManager _scheduleManager;
+    private readonly ILogger<LiveTvSchedulerController> _logger;
 
     public LiveTvSchedulerController(
         ILibraryManager libraryManager,
-        ScheduleManager scheduleManager)
+        ScheduleManager scheduleManager,
+        ILogger<LiveTvSchedulerController> logger)
     {
         _libraryManager = libraryManager;
         _scheduleManager = scheduleManager;
+        _logger = logger;
     }
 
     private PluginConfiguration Config =>
@@ -342,6 +346,9 @@ public class LiveTvSchedulerController : ControllerBase
         [FromQuery] string? parentId = null,
         [FromQuery] int limit = 50)
     {
+        _logger.LogInformation("Search called: query='{Query}', parentId='{ParentId}', limit={Limit}",
+            query, parentId, limit);
+
         var itemQuery = new InternalItemsQuery
         {
             Recursive = true,
@@ -369,25 +376,96 @@ public class LiveTvSchedulerController : ControllerBase
             itemQuery.AncestorIds = new[] { parentGuid };
         }
 
-        var results = _libraryManager.GetItemsResult(itemQuery);
-
-        var items = results.Items.Select(item => new MediaItemInfo
+        try
         {
-            Id = item.Id.ToString("N"),
-            Name = item.Name,
-            Type = item is Movie ? "Movie" : item is Episode ? "Episode" : item is Series ? "Series" : "Unknown",
-            RuntimeTicks = item.RunTimeTicks ?? 0,
-            RuntimeDisplay = item.RunTimeTicks.HasValue
-                ? TimeSpan.FromTicks(item.RunTimeTicks.Value).ToString(@"h\:mm\:ss")
-                : "Unknown",
-            SeriesName = (item as Episode)?.SeriesName,
-            SeasonNumber = (item as Episode)?.ParentIndexNumber,
-            EpisodeNumber = (item as Episode)?.IndexNumber,
-            ProductionYear = item.ProductionYear,
-            ImageUrl = item.HasImage(ImageType.Primary) ? $"/Items/{item.Id}/Images/Primary" : null
-        }).ToList();
+            var results = _libraryManager.GetItemsResult(itemQuery);
+            _logger.LogInformation("Search returned {Count} items (TotalRecordCount={Total})",
+                results.Items.Count, results.TotalRecordCount);
 
-        return Ok(items);
+            var items = results.Items.Select(item => new MediaItemInfo
+            {
+                Id = item.Id.ToString("N"),
+                Name = item.Name,
+                Type = item is Movie ? "Movie" : item is Episode ? "Episode" : item is Series ? "Series" : "Unknown",
+                RuntimeTicks = item.RunTimeTicks ?? 0,
+                RuntimeDisplay = item.RunTimeTicks.HasValue
+                    ? TimeSpan.FromTicks(item.RunTimeTicks.Value).ToString(@"h\:mm\:ss")
+                    : "Unknown",
+                SeriesName = (item as Episode)?.SeriesName,
+                SeasonNumber = (item as Episode)?.ParentIndexNumber,
+                EpisodeNumber = (item as Episode)?.IndexNumber,
+                ProductionYear = item.ProductionYear,
+                ImageUrl = item.HasImage(ImageType.Primary) ? $"/Items/{item.Id}/Images/Primary" : null
+            }).ToList();
+
+            return Ok(items);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Search failed for query='{Query}'", query);
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Diagnostic endpoint to verify library access works.
+    /// </summary>
+    [HttpGet("Diagnostics")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public ActionResult GetDiagnostics()
+    {
+        var diag = new Dictionary<string, object>();
+
+        try
+        {
+            // Test basic library query (movies)
+            var movieQuery = new InternalItemsQuery
+            {
+                IncludeItemTypes = new[] { BaseItemKind.Movie },
+                Recursive = true,
+                Limit = 5
+            };
+            var movies = _libraryManager.GetItemsResult(movieQuery);
+            diag["movieCount"] = movies.TotalRecordCount;
+            diag["sampleMovies"] = movies.Items.Select(m => m.Name).ToList();
+
+            // Test basic library query (episodes)
+            var episodeQuery = new InternalItemsQuery
+            {
+                IncludeItemTypes = new[] { BaseItemKind.Episode },
+                Recursive = true,
+                Limit = 5
+            };
+            var episodes = _libraryManager.GetItemsResult(episodeQuery);
+            diag["episodeCount"] = episodes.TotalRecordCount;
+            diag["sampleEpisodes"] = episodes.Items.Select(e => e.Name).ToList();
+
+            // Test collection folder query
+            var folderQuery = new InternalItemsQuery
+            {
+                IncludeItemTypes = new[] { BaseItemKind.CollectionFolder },
+                Recursive = false
+            };
+            var folders = _libraryManager.GetItemsResult(folderQuery);
+            diag["libraries"] = folders.Items.Select(f => new { id = f.Id.ToString("N"), name = f.Name }).ToList();
+
+            // Channel config
+            diag["channelCount"] = Config.Channels.Count;
+            diag["channels"] = Config.Channels.Select(c => new
+            {
+                name = c.Name,
+                enabled = c.Enabled,
+                programCount = c.Programs.Count,
+                libraryIdCount = c.LibraryIds.Count,
+                libraryIds = c.LibraryIds
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            diag["error"] = ex.ToString();
+        }
+
+        return Ok(diag);
     }
 
     /// <summary>

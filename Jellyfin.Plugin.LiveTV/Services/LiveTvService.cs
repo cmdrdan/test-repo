@@ -65,7 +65,9 @@ public class LiveTvService : ILiveTvService
                 IsHD = true
             });
 
-        return Task.FromResult(channels);
+        var list = channels.ToList();
+        _logger.LogInformation("GetChannelsAsync: returning {Count} enabled channels", list.Count);
+        return Task.FromResult<IEnumerable<ChannelInfo>>(list);
     }
 
     /// <summary>
@@ -77,13 +79,26 @@ public class LiveTvService : ILiveTvService
         DateTime endDateUtc,
         CancellationToken cancellationToken)
     {
+        _logger.LogInformation(
+            "GetProgramsAsync called: channelId={ChannelId}, start={Start}, end={End}",
+            channelId, startDateUtc, endDateUtc);
+
         var channel = Config.Channels.FirstOrDefault(c => c.Id == channelId);
         if (channel is null)
         {
+            _logger.LogWarning("GetProgramsAsync: channel {ChannelId} not found in config", channelId);
             return Task.FromResult(Enumerable.Empty<ProgramInfo>());
         }
 
+        _logger.LogInformation(
+            "GetProgramsAsync: found channel '{Name}' with {ProgCount} programs, {LibCount} libraryIds",
+            channel.Name, channel.Programs.Count, channel.LibraryIds.Count);
+
         var slots = _scheduleManager.GenerateSchedule(channel, startDateUtc, endDateUtc);
+
+        _logger.LogInformation(
+            "GetProgramsAsync: generated {SlotCount} schedule slots for channel '{Name}'",
+            slots.Count, channel.Name);
 
         var programs = slots.Select(slot => new ProgramInfo
         {
