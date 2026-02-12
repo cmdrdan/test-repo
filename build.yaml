@@ -2,8 +2,8 @@
 name: "LiveTV Scheduler"
 guid: "f4c6e3a8-b7d1-4e2f-9a5c-8d3b1e6f7a90"
 version: "1.0.0.0"
-targetAbi: "10.10.0.0"
-framework: "net8.0"
+targetAbi: "10.11.0.0"
+framework: "net9.0"
 overview: "Create virtual live TV channels from your media library"
 description: >
   Simulates live TV programming using your existing Jellyfin media library.

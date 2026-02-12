@@ -305,10 +305,15 @@
                             Create virtual TV channels from your media library
                         </p>
                     </div>
-                    <button class="btn btn-primary" onclick="LiveTV.showCreateChannel()">
-                        + New Channel
-                    </button>
+                    <div style="display: flex; gap: 0.5em;">
+                        <button class="btn" onclick="LiveTV.runDiagnostics()">Diagnostics</button>
+                        <button class="btn btn-primary" onclick="LiveTV.showCreateChannel()">
+                            + New Channel
+                        </button>
+                    </div>
                 </div>
+
+                <div id="diagnosticsOutput" style="display: none; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 1em; margin-bottom: 1em; font-family: monospace; font-size: 0.85em; white-space: pre-wrap; max-height: 300px; overflow-y: auto;"></div>
 
                 <div id="channelList" class="channel-list">
                     <div class="empty-state">
@@ -424,6 +429,10 @@
                     url: params ? ApiClient.getUrl(path, params) : ApiClient.getUrl(path),
                     type: 'GET',
                     dataType: 'json'
+                }).catch(function(err) {
+                    console.error('[LiveTV] GET ' + path + ' failed:', err);
+                    Dashboard.alert('API error: GET ' + path + ' - ' + (err.statusText || err.status || 'unknown error'));
+                    throw err;
                 });
             },
 
@@ -433,6 +442,10 @@
                     type: 'POST',
                     data: JSON.stringify(data),
                     contentType: 'application/json'
+                }).catch(function(err) {
+                    console.error('[LiveTV] POST ' + path + ' failed:', err);
+                    Dashboard.alert('API error: POST ' + path + ' - ' + (err.statusText || err.status || 'unknown error'));
+                    throw err;
                 });
             },
 
@@ -442,6 +455,10 @@
                     type: 'PUT',
                     data: JSON.stringify(data),
                     contentType: 'application/json'
+                }).catch(function(err) {
+                    console.error('[LiveTV] PUT ' + path + ' failed:', err);
+                    Dashboard.alert('API error: PUT ' + path + ' - ' + (err.statusText || err.status || 'unknown error'));
+                    throw err;
                 });
             },
 
@@ -449,6 +466,10 @@
                 return ApiClient.ajax({
                     url: ApiClient.getUrl(path),
                     type: 'DELETE'
+                }).catch(function(err) {
+                    console.error('[LiveTV] DELETE ' + path + ' failed:', err);
+                    Dashboard.alert('API error: DELETE ' + path + ' - ' + (err.statusText || err.status || 'unknown error'));
+                    throw err;
                 });
             },
 
@@ -651,9 +672,15 @@
                 }
 
                 var self = this;
+                var container = document.getElementById('searchResults');
+                container.innerHTML = '<div style="padding: 1em; text-align: center; opacity: 0.5;">Searching...</div>';
+                container.style.display = 'block';
+
                 this.apiGet('LiveTvScheduler/Search', { query: query, limit: 30 })
                     .then(function(items) {
                         self.renderSearchResults(items);
+                    }).catch(function() {
+                        container.innerHTML = '<div style="padding: 1em; text-align: center; color: #cc3333;">Search failed. Check Jellyfin logs for details.</div>';
                     });
             },
 
@@ -833,6 +860,20 @@
                 var div = document.createElement('div');
                 div.textContent = str;
                 return div.innerHTML;
+            },
+
+            // ── Diagnostics ─────────────────────────────
+
+            runDiagnostics: function() {
+                var container = document.getElementById('diagnosticsOutput');
+                container.textContent = 'Running diagnostics...';
+                container.style.display = 'block';
+
+                this.apiGet('LiveTvScheduler/Diagnostics').then(function(data) {
+                    container.textContent = JSON.stringify(data, null, 2);
+                }).catch(function() {
+                    container.textContent = 'Diagnostics request failed. Check browser console and Jellyfin logs.';
+                });
             },
 
             // ── Guide Refresh ───────────────────────────

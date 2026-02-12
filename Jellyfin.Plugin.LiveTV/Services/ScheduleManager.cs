@@ -39,7 +39,19 @@ public class ScheduleManager
     {
         if (channel.Programs.Count > 0)
         {
-            return channel.Programs.Where(p => p.RuntimeTicks > 0).ToList();
+            var explicit_ = channel.Programs.Where(p => p.RuntimeTicks > 0).ToList();
+            _logger.LogInformation(
+                "Channel {Name}: using {Count} explicit programs (of {Total} total)",
+                channel.Name, explicit_.Count, channel.Programs.Count);
+            return explicit_;
+        }
+
+        if (channel.LibraryIds.Count == 0)
+        {
+            _logger.LogWarning(
+                "Channel {Name}: no explicit programs and no library IDs configured",
+                channel.Name);
+            return new List<ChannelProgram>();
         }
 
         // Pull items from the specified library IDs
@@ -49,12 +61,14 @@ public class ScheduleManager
         {
             if (!Guid.TryParse(libraryId, out var parentGuid))
             {
+                _logger.LogWarning("Channel {Name}: invalid library ID '{LibraryId}'", channel.Name, libraryId);
                 continue;
             }
 
+            // Use AncestorIds instead of ParentId for EF Core compatibility in Jellyfin 10.11+
             var query = new InternalItemsQuery
             {
-                ParentId = parentGuid,
+                AncestorIds = new[] { parentGuid },
                 Recursive = true,
                 IsVirtualItem = false,
                 IncludeItemTypes = new[]
@@ -68,23 +82,37 @@ public class ScheduleManager
                 }
             };
 
-            var items = _libraryManager.GetItemsResult(query);
-
-            foreach (var item in items.Items)
+            try
             {
-                if (item.RunTimeTicks is null or <= 0)
-                {
-                    continue;
-                }
+                var items = _libraryManager.GetItemsResult(query);
+                _logger.LogInformation(
+                    "Channel {Name}: library {LibraryId} returned {Count} items (TotalRecordCount={Total})",
+                    channel.Name, libraryId, items.Items.Count, items.TotalRecordCount);
 
-                programs.Add(new ChannelProgram
+                foreach (var item in items.Items)
                 {
-                    ItemId = item.Id.ToString("N"),
-                    Name = item.Name,
-                    RuntimeTicks = item.RunTimeTicks.Value
-                });
+                    if (item.RunTimeTicks is null or <= 0)
+                    {
+                        continue;
+                    }
+
+                    programs.Add(new ChannelProgram
+                    {
+                        ItemId = item.Id.ToString("N"),
+                        Name = item.Name,
+                        RuntimeTicks = item.RunTimeTicks.Value
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Channel {Name}: error querying library {LibraryId}", channel.Name, libraryId);
             }
         }
+
+        _logger.LogInformation(
+            "Channel {Name}: resolved {Count} programs from {LibCount} libraries",
+            channel.Name, programs.Count, channel.LibraryIds.Count);
 
         return programs;
     }
