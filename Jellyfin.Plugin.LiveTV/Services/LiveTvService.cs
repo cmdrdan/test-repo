@@ -150,6 +150,8 @@ public class LiveTvService : ILiveTvService
 
     /// <summary>
     /// Returns available media sources for a channel.
+    /// Uses the preview variant with RequiresOpening=true so Jellyfin
+    /// opens the stream through the proper Live TV pipeline first.
     /// </summary>
     public Task<List<MediaSourceInfo>> GetChannelStreamMediaSources(
         string channelId,
@@ -167,7 +169,7 @@ public class LiveTvService : ILiveTvService
             return Task.FromResult(new List<MediaSourceInfo>());
         }
 
-        var mediaSource = _streamManager.CreateMediaSource(channelId, nowPlaying);
+        var mediaSource = _streamManager.CreateMediaSourcePreview(channelId, nowPlaying);
         return Task.FromResult(new List<MediaSourceInfo> { mediaSource });
     }
 

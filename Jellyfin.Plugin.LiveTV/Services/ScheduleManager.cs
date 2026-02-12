@@ -305,10 +305,12 @@ public class ScheduleManager
             }
         }
 
-        // Get primary image for EPG
-        if (item.HasImage(ImageType.Primary))
+        // Get primary image for EPG — must be an actual file path on disk,
+        // not a URL path, because Jellyfin's SkiaEncoder reads the file directly.
+        var imagePath = item.GetImagePath(ImageType.Primary);
+        if (!string.IsNullOrEmpty(imagePath))
         {
-            slot.ImageUrl = $"/Items/{item.Id}/Images/Primary";
+            slot.ImageUrl = imagePath;
         }
     }
 }
