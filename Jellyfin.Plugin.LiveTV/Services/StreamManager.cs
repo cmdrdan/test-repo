@@ -67,12 +67,10 @@ public class StreamManager
             throw new InvalidOperationException($"Library item {slot.ItemId} not found");
         }
 
-        // Use a stable ID for previews so the client can reference it later in PlaybackInfo.
-        // The preview ID must be deterministic — if it changes between
-        // GetChannelStreamMediaSources and GetPlaybackInfo, Jellyfin can't match them.
-        // For actual opened streams, use a unique ID per session.
-        var stableId = $"livetv_{channelId}";
-        var streamId = isPreview ? stableId : $"livetv_{channelId}_{DateTime.UtcNow.Ticks}";
+        // MediaSourceInfo.Id MUST be a valid GUID — Jellyfin's DynamicHlsHelper
+        // calls Guid.Parse() on it. Use the channelId (already a GUID in "N" format)
+        // for stable preview IDs, and a fresh GUID for opened streams.
+        var streamId = isPreview ? channelId : Guid.NewGuid().ToString("N");
 
         _logger.LogInformation(
             "Building media source for channel {ChannelId}: {Title} at offset {Offset} (preview={Preview}, id={StreamId})",
