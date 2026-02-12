@@ -110,9 +110,6 @@ public class StreamManager
             // codec info, container format, bitrate, etc.
             mediaSource = primarySource;
             mediaSource.Id = streamId;
-            mediaSource.LiveStreamId = streamId;
-            mediaSource.RequiresClosing = true;
-            mediaSource.RequiresOpening = isPreview;
             mediaSource.IsInfiniteStream = false;
             mediaSource.RunTimeTicks = slot.RuntimeTicks;
             mediaSource.SupportsDirectPlay = true;
@@ -123,7 +120,20 @@ public class StreamManager
 
             if (isPreview)
             {
-                mediaSource.OpenToken = $"livetv_{channelId}";
+                // Preview sources must NOT have LiveStreamId set.
+                // If LiveStreamId is set, GetStreamingState tries to look up
+                // the live stream in IMediaSourceManager — but since we never
+                // called OpenLiveStream, it's not registered, and we get null.
+                // Without LiveStreamId, Jellyfin treats it as a regular file source.
+                mediaSource.LiveStreamId = null;
+                mediaSource.RequiresOpening = false;
+                mediaSource.RequiresClosing = false;
+            }
+            else
+            {
+                mediaSource.LiveStreamId = streamId;
+                mediaSource.RequiresOpening = false;
+                mediaSource.RequiresClosing = true;
             }
         }
         else
@@ -144,19 +154,14 @@ public class StreamManager
                 SupportsDirectStream = true,
                 SupportsTranscoding = true,
                 SupportsProbing = true,
-                RequiresOpening = isPreview,
-                RequiresClosing = true,
-                LiveStreamId = streamId,
+                RequiresOpening = false,
+                RequiresClosing = !isPreview,
+                LiveStreamId = isPreview ? null : streamId,
                 ReadAtNativeFramerate = false,
                 RunTimeTicks = slot.RuntimeTicks,
                 MediaStreams = new List<MediaStream>(),
                 Bitrate = null
             };
-
-            if (isPreview)
-            {
-                mediaSource.OpenToken = $"livetv_{channelId}";
-            }
         }
 
         if (!isPreview)
