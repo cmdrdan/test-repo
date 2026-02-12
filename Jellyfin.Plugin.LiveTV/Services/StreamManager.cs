@@ -67,11 +67,16 @@ public class StreamManager
             throw new InvalidOperationException($"Library item {slot.ItemId} not found");
         }
 
-        var streamId = $"livetv_{channelId}_{DateTime.UtcNow.Ticks}";
+        // Use a stable ID for previews so the client can reference it later in PlaybackInfo.
+        // The preview ID must be deterministic — if it changes between
+        // GetChannelStreamMediaSources and GetPlaybackInfo, Jellyfin can't match them.
+        // For actual opened streams, use a unique ID per session.
+        var stableId = $"livetv_{channelId}";
+        var streamId = isPreview ? stableId : $"livetv_{channelId}_{DateTime.UtcNow.Ticks}";
 
         _logger.LogInformation(
-            "Building media source for channel {ChannelId}: {Title} at offset {Offset} (preview={Preview})",
-            channelId, slot.Title, slot.ElapsedTime, isPreview);
+            "Building media source for channel {ChannelId}: {Title} at offset {Offset} (preview={Preview}, id={StreamId})",
+            channelId, slot.Title, slot.ElapsedTime, isPreview, streamId);
 
         // Get the actual media source from the library item — this has all the
         // codec info, MediaStreams, container format, etc. that Jellyfin's
