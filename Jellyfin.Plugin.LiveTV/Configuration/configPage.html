@@ -692,6 +692,7 @@
                     return;
                 }
 
+                this.lastSearchResults = items;
                 var html = '';
                 for (var i = 0; i < items.length; i++) {
                     var item = items[i];
@@ -705,8 +706,7 @@
                             '<div class="subtitle">' + this.escapeHtml(subtitle) + ' - Click to add all episodes</div></div>' +
                             '<span class="btn" style="font-size: 0.8em;">+ All</span></div>';
                     } else {
-                        html += '<div class="search-item" onclick="LiveTV.addProgram(\'' +
-                            item.Id + '\', ' + JSON.stringify(item.Name) + ', ' + item.RuntimeTicks + ')">' +
+                        html += '<div class="search-item" onclick="LiveTV.addSearchResult(' + i + ')">' +
                             '<div class="info"><div class="title">' + this.escapeHtml(item.Name) + '</div>' +
                             '<div class="subtitle">' + this.escapeHtml(subtitle) + ' &middot; ' + item.RuntimeDisplay + '</div></div>' +
                             '<span class="btn" style="font-size: 0.8em;">+ Add</span></div>';
@@ -715,6 +715,13 @@
 
                 container.innerHTML = html;
                 container.style.display = 'block';
+            },
+
+            addSearchResult: function(index) {
+                var item = this.lastSearchResults[index];
+                if (item) {
+                    this.addProgram(item.Id, item.Name, item.RuntimeTicks);
+                }
             },
 
             addProgram: function(itemId, name, runtimeTicks) {

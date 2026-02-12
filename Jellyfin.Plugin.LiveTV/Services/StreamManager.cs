@@ -102,6 +102,15 @@ public class StreamManager
 
         MediaSourceInfo mediaSource;
 
+        // Calculate the remaining time in this slot. Playback starts from
+        // the beginning of the file, so report only the remaining runtime
+        // so the progress bar stays consistent with the actual playback position.
+        var remainingTicks = slot.RuntimeTicks - slot.ElapsedTime.Ticks;
+        if (remainingTicks <= 0)
+        {
+            remainingTicks = slot.RuntimeTicks;
+        }
+
         if (primarySource is not null)
         {
             // Use the real media source — this preserves all MediaStreams,
@@ -109,7 +118,7 @@ public class StreamManager
             mediaSource = primarySource;
             mediaSource.Id = streamId;
             mediaSource.IsInfiniteStream = false;
-            mediaSource.RunTimeTicks = slot.RuntimeTicks;
+            mediaSource.RunTimeTicks = remainingTicks;
             mediaSource.SupportsDirectPlay = true;
             mediaSource.SupportsDirectStream = true;
             mediaSource.SupportsTranscoding = true;
@@ -156,7 +165,7 @@ public class StreamManager
                 RequiresClosing = !isPreview,
                 LiveStreamId = isPreview ? null : streamId,
                 ReadAtNativeFramerate = false,
-                RunTimeTicks = slot.RuntimeTicks,
+                RunTimeTicks = remainingTicks,
                 MediaStreams = new List<MediaStream>(),
                 Bitrate = null
             };
