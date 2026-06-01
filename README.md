@@ -24,23 +24,34 @@ Unlike ErsatzTV or Tunarr which run as separate services and re-encode streams, 
 
 ## Installation
 
-### Manual Install
+### Option 1: Plugin Repository (recommended)
 
-1. Build the plugin: `dotnet build -c Release`
-2. Copy `Jellyfin.Plugin.LiveTV.dll` to your Jellyfin plugins directory:
-   - Linux: `/var/lib/jellyfin/plugins/LiveTVScheduler/`
-   - Docker: `/config/plugins/LiveTVScheduler/`
-   - Windows: `%APPDATA%\jellyfin\plugins\LiveTVScheduler\`
+1. In Jellyfin, go to **Dashboard > Plugins > Repositories**
+2. Click **+** and add this repository:
+   - Name: `LiveTV Scheduler`
+   - URL: `https://raw.githubusercontent.com/cmdrdan/test-repo/master/manifest.json`
+3. Go to **Dashboard > Plugins > Catalog**, find **LiveTV Scheduler**, and install
+4. Restart Jellyfin
+
+### Option 2: Manual Install
+
+1. Download the latest `livetv-scheduler-<version>.zip` from the [Releases page](https://github.com/cmdrdan/test-repo/releases)
+2. Extract it into your Jellyfin plugins directory so the DLL and `meta.json` sit together:
+   - Linux: `/var/lib/jellyfin/plugins/LiveTV Scheduler_1.0.0.0/`
+   - Docker: `/config/plugins/LiveTV Scheduler_1.0.0.0/`
+   - Windows: `%ProgramData%\Jellyfin\Server\plugins\LiveTV Scheduler_1.0.0.0\`
 3. Restart Jellyfin
 
-### Building
+### Option 3: Build from source
 
 ```bash
 dotnet restore
 dotnet build -c Release
+pwsh ./package.ps1
 ```
 
-The compiled DLL will be in `Jellyfin.Plugin.LiveTV/bin/Release/net8.0/`.
+The packaged zip (DLL + `meta.json`) is written to `./dist/livetv-scheduler-<version>.zip`.
+The raw DLL is in `Jellyfin.Plugin.LiveTV/bin/Release/net9.0/`.
 
 ## Usage
 
@@ -98,8 +109,8 @@ All endpoints require admin authorization.
 
 ## Requirements
 
-- Jellyfin Server 10.10+
-- .NET 8.0 (for building)
+- Jellyfin Server 10.11.6+
+- .NET 9.0 SDK (for building)
 
 ## License
 
