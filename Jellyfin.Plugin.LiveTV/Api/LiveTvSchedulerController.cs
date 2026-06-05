@@ -94,6 +94,7 @@ public class LiveTvSchedulerController : ControllerBase
             Number = request.Number ?? (Config.Channels.Count + 1).ToString(),
             Group = request.Group ?? "Virtual",
             Mode = request.Mode,
+            StreamMode = request.StreamMode,
             Enabled = true,
             ImageUrl = request.ImageUrl,
             LibraryIds = request.LibraryIds ?? new List<string>()
@@ -125,6 +126,7 @@ public class LiveTvSchedulerController : ControllerBase
         if (request.Number is not null) channel.Number = request.Number;
         if (request.Group is not null) channel.Group = request.Group;
         if (request.Mode.HasValue) channel.Mode = request.Mode.Value;
+        if (request.StreamMode.HasValue) channel.StreamMode = request.StreamMode.Value;
         if (request.Enabled.HasValue) channel.Enabled = request.Enabled.Value;
         if (request.ImageUrl is not null) channel.ImageUrl = request.ImageUrl;
         if (request.LibraryIds is not null) channel.LibraryIds = request.LibraryIds;
@@ -532,6 +534,7 @@ public class CreateChannelRequest
     public string? Number { get; set; }
     public string? Group { get; set; }
     public ScheduleMode Mode { get; set; } = ScheduleMode.Shuffle;
+    public StreamMode StreamMode { get; set; } = StreamMode.OnDemand;
     public string? ImageUrl { get; set; }
     public List<string>? LibraryIds { get; set; }
 }
@@ -542,6 +545,7 @@ public class UpdateChannelRequest
     public string? Number { get; set; }
     public string? Group { get; set; }
     public ScheduleMode? Mode { get; set; }
+    public StreamMode? StreamMode { get; set; }
     public bool? Enabled { get; set; }
     public string? ImageUrl { get; set; }
     public List<string>? LibraryIds { get; set; }

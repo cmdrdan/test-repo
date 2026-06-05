@@ -1,7 +1,7 @@
 ---
 name: "LiveTV Scheduler"
 guid: "f4c6e3a8-b7d1-4e2f-9a5c-8d3b1e6f7a90"
-version: "1.0.0.0"
+version: "1.0.1.0"
 targetAbi: "10.11.6.0"
 framework: "net9.0"
 overview: "Create virtual live TV channels from your media library"
@@ -15,5 +15,7 @@ owner: "cmdrdan"
 artifacts:
   - "Jellyfin.Plugin.LiveTV.dll"
 changelog: >
-  Initial release with channel management, schedule generation, and
-  native Jellyfin Live TV integration.
+  Add per-channel Stream Mode setting. On-demand (default) starts each
+  tune-in at the beginning of the current program with correct progress
+  reporting; Live seeks into the program at the scheduled offset using
+  HLS transcoding so it behaves like real broadcast TV.

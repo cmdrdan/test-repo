@@ -355,6 +355,16 @@
                     </div>
                 </div>
 
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="channelStreamMode">Stream Mode</label>
+                        <select id="channelStreamMode">
+                            <option value="0">On-demand — start from the beginning of the current program</option>
+                            <option value="1">Live — seek to the scheduled offset (requires HLS transcoding)</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label>Content Sources (Libraries)</label>
                     <div id="libraryChips" class="library-chips">
@@ -498,6 +508,7 @@
                 for (var i = 0; i < this.channels.length; i++) {
                     var ch = this.channels[i];
                     var modeText = ch.Mode === 0 ? 'Shuffle' : 'Sequential';
+                    var streamModeText = ch.StreamMode === 1 ? 'Live' : 'On-demand';
                     var progCount = ch.Programs ? ch.Programs.length : 0;
                     var libCount = ch.LibraryIds ? ch.LibraryIds.length : 0;
                     var sourceText = '';
@@ -513,7 +524,7 @@
                         '<div class="channel-number">' + this.escapeHtml(ch.Number) + '</div>' +
                         '<div class="channel-details">' +
                         '<h3>' + this.escapeHtml(ch.Name) + '</h3>' +
-                        '<div class="meta">' + modeText + ' &middot; ' + sourceText + '</div>' +
+                        '<div class="meta">' + modeText + ' &middot; ' + streamModeText + ' &middot; ' + sourceText + '</div>' +
                         '</div>' +
                         '</div>' +
                         '<div class="channel-actions">' +
@@ -543,6 +554,7 @@
                 document.getElementById('channelNumber').value = (this.channels.length + 1).toString();
                 document.getElementById('channelGroup').value = 'Virtual';
                 document.getElementById('channelMode').value = '0';
+                document.getElementById('channelStreamMode').value = '0';
                 this.currentPrograms = [];
                 this.renderLibraryChips([]);
                 this.renderProgramList();
@@ -560,6 +572,7 @@
                 document.getElementById('channelNumber').value = ch.Number;
                 document.getElementById('channelGroup').value = ch.Group;
                 document.getElementById('channelMode').value = ch.Mode.toString();
+                document.getElementById('channelStreamMode').value = (ch.StreamMode || 0).toString();
                 this.currentPrograms = ch.Programs ? ch.Programs.slice() : [];
                 this.renderLibraryChips(ch.LibraryIds || []);
                 this.renderProgramList();
@@ -578,6 +591,7 @@
                     Number: document.getElementById('channelNumber').value,
                     Group: document.getElementById('channelGroup').value,
                     Mode: parseInt(document.getElementById('channelMode').value),
+                    StreamMode: parseInt(document.getElementById('channelStreamMode').value),
                     LibraryIds: selectedLibs
                 };
 

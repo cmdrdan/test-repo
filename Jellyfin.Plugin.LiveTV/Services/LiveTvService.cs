@@ -144,7 +144,7 @@ public class LiveTvService : ILiveTvService
             throw new InvalidOperationException($"No content available for channel {channel.Name}");
         }
 
-        var mediaSource = _streamManager.CreateMediaSource(channelId, nowPlaying);
+        var mediaSource = _streamManager.CreateMediaSource(channel, nowPlaying);
         return Task.FromResult(mediaSource);
     }
 
@@ -169,7 +169,7 @@ public class LiveTvService : ILiveTvService
             return Task.FromResult(new List<MediaSourceInfo>());
         }
 
-        var mediaSource = _streamManager.CreateMediaSourcePreview(channelId, nowPlaying);
+        var mediaSource = _streamManager.CreateMediaSourcePreview(channel, nowPlaying);
         return Task.FromResult(new List<MediaSourceInfo> { mediaSource });
     }
 
