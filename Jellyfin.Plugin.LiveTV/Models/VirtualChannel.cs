@@ -41,6 +41,11 @@ public class VirtualChannel
     public ScheduleMode Mode { get; set; } = ScheduleMode.Shuffle;
 
     /// <summary>
+    /// How playback begins when a viewer tunes in.
+    /// </summary>
+    public StreamMode StreamMode { get; set; } = StreamMode.OnDemand;
+
+    /// <summary>
     /// Explicit program list for Sequential/Custom modes.
     /// Each entry references a Jellyfin library item by its ID.
     /// </summary>
@@ -82,4 +87,23 @@ public enum ScheduleMode
     /// Play programs in the order they appear in the Programs list, looping.
     /// </summary>
     Sequential = 1
+}
+
+/// <summary>
+/// Controls where in the scheduled program a viewer starts when they tune in.
+/// </summary>
+public enum StreamMode
+{
+    /// <summary>
+    /// Always start the currently-scheduled program from its beginning.
+    /// Direct-play, no transcoding. Behaves like VOD of the current slot.
+    /// </summary>
+    OnDemand = 0,
+
+    /// <summary>
+    /// Start at the elapsed offset within the currently-scheduled program,
+    /// mirroring real broadcast TV. Requires server-side HLS transcoding
+    /// so the seek can be baked into the stream.
+    /// </summary>
+    Live = 1
 }

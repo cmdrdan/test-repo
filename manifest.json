@@ -8,6 +8,14 @@
     "category": "Live TV",
     "versions": [
       {
+        "version": "1.0.1.0",
+        "changelog": "Add per-channel Stream Mode setting. On-demand (default) starts each tune-in at the beginning of the current program with correct progress reporting; Live seeks into the program at the scheduled offset using HLS transcoding so it behaves like real broadcast TV.",
+        "targetAbi": "10.11.6.0",
+        "sourceUrl": "https://github.com/cmdrdan/test-repo/releases/download/v1.0.1.0/livetv-scheduler-1.0.1.0.zip",
+        "checksum": "0D65BD70DB317CDCCCF3708CFFE6A05F",
+        "timestamp": "2026-06-05T12:07:17Z"
+      },
+      {
         "version": "1.0.0.0",
         "changelog": "Initial release with channel management, schedule generation, and native Jellyfin Live TV integration.",
         "targetAbi": "10.11.6.0",

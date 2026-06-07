@@ -15,6 +15,7 @@ Unlike ErsatzTV or Tunarr which run as separate services and re-encode streams, 
 
 - **Virtual Channels** — Create unlimited channels with custom names, numbers, and groups
 - **Schedule Modes** — Shuffle (randomized but deterministic) or Sequential (ordered playlist)
+- **Stream Modes** — On-demand (tune-in starts the program from the beginning) or Live (tune-in starts at the scheduled offset, mirroring real broadcast TV)
 - **Library Integration** — Pull content from any Jellyfin library or add specific shows/movies
 - **Native EPG** — Full TV guide data appears in Jellyfin's built-in Live TV guide
 - **Series Support** — Add all episodes of a series to a channel in one click
@@ -64,9 +65,12 @@ The raw DLL is in `Jellyfin.Plugin.LiveTV/bin/Release/net9.0/`.
 5. Choose a schedule mode:
    - **Shuffle**: Content plays in a randomized but consistent order
    - **Sequential**: Content plays in the order you added it, looping
-6. Save the channel
-7. Go to **Live TV > Guide** to see your channels in the program guide
-8. Tune in and enjoy!
+6. Choose a stream mode:
+   - **On-demand** (default): Tuning in always starts the currently-scheduled program from its beginning. Direct-play, no transcoding overhead. Behaves like VOD of the current slot.
+   - **Live**: Tuning in jumps directly to the scheduled offset within the current program — if a 2-hour movie has been "airing" for 30 minutes, you start watching 30 minutes in. Requires server-side HLS transcoding so the seek can be baked into the stream.
+7. Save the channel
+8. Go to **Live TV > Guide** to see your channels in the program guide
+9. Tune in and enjoy!
 
 ## Architecture
 
